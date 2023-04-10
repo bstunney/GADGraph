@@ -1,6 +1,6 @@
 import pandas as pd
 import requests
-from GADGraph.dbutils import DBUtils
+from dbutils import DBUtils
 
 # hardcoded to my acc info
 auth_params = {"email": "chandra.d@northeastern.edu", "password": "Diamond1220!"}
