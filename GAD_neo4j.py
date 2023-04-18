@@ -3,6 +3,7 @@ Query GAD database from Neo4j
 """
 
 import neo4j
+from GAD_visualize_analyze import GADVisualizeAnalyze as GVA
 
 class GADGraph():
 
@@ -71,7 +72,7 @@ class GADGraph():
             print("Nodes and relationships inserted.")
 
 
-    def list_nodes(self):
+    def _list_nodes(self):
         """
         List all nodes in the graph.
         """
@@ -86,7 +87,7 @@ class GADGraph():
             for record in result:
                 print(record)
 
-    def count_relationships(self):
+    def _count_relationships(self):
         """
         Count number of relationships in the graph.
         """
@@ -100,6 +101,46 @@ class GADGraph():
             result = session.run(query)
             for record in result:
                 print(record)
+
+    def _parse_results(self, result):
+        """
+        Parse results from Neo4j query.
+
+        :param result: result from Neo4j query
+        :type result: neo4j.Result
+        :return: list of edges
+        :rtype: list
+        """
+
+        # empty list to store edges
+        edges = []
+
+        # iterate through result
+        for record in result:
+            edges.append((record[0], record[2]))
+
+        # return edges
+        return edges
+    
+    def _visualize(self, result):
+        """
+        _summary_
+
+        :param result: _description_
+        :type result: _type_
+        """
+
+        # parse results
+        edges = self._parse_results(result)
+
+        # visualize results
+        gva = GVA()
+
+        # add nodes
+        gva.create_graph(edges)
+
+        # visualize graph
+        gva.draw_graph()
 
     def get_associations(self, node_idx, score_threshold=0.0):
         """
@@ -138,8 +179,10 @@ class GADGraph():
                 print("No gene or disease node with index", str(node_idx), "found.")
                 return
             else:
-                for record in result:
-                    print(record)
+
+                # visualize the results
+                self._visualize(result)
+                
     
     def get_gene_details(self, gene):
         """
@@ -485,14 +528,137 @@ class GADGraph():
                 print(record)
 
 def main():
+
     # create GADGraph object
     gad = GADGraph("bolt://localhost:7687", "neo4j", "password")
 
     # clear the database
-    # gad.clear_database()
+    gad.clear_database()
 
     # insert nodes and relationships
-    # gad.insert_nodes_and_relationships()
+    gad.insert_nodes_and_relationships()
+
+    # user input
+    q = False
+
+    while q == False:
+        print("Possible actions to enter: 'gene details', 'disease details', 'subgraph', 'common_diseases', 'common genes', 'similar genes', 'network stats', or 'quit'")
+
+        # enter an action
+        action = input("Enter an action: ").lower()
+
+        # quit the program
+        if action == 'quit':
+            q = True
+
+        # gene details
+        elif action == 'gene details':
+            print("\nFind details about a gene")
+            gene = str(input("Enter gene id or gene symbol to get full details for: "))
+
+            # get gene details
+            gad.get_gene_details(gene)
+
+        # disease details
+        elif action == 'disease details':
+            print("\nFind details about a disease")
+            disease = str(input("Enter disease id or disease name to get full details for: "))
+
+            # get disease details
+            gad.get_disease_details(disease)
+
+        # subgraph
+        elif action == 'subgraph':
+            print("\nCreate a subgraph for a given node and threshold for score of association")
+            node_idx = str(input("Enter node index to create subgraph for: "))
+            score = float(input("Enter score to find relationships for the node: "))
+
+            # create subgraph
+            gad.get_associations(node_idx, score)            
+
+        # common diseases
+        elif action == 'common diseases':
+            print("\nFind if there are any common disease(s) between 2 genes (with optional score thresholds)")
+            node1 = int(input("Enter the first gene's id: "))
+            node2 = int(input("Enter the second gene's id: "))
+
+            # default score thresholds
+            score1 = 0.0
+            score2 = 0.0
+
+            # ask user if they want to enter score thresholds
+            ans1 = input("Do you want to enter a score threshold for the first gene? (y/n)")
+
+            # if yes, get score threshold
+            if ans1 == 'y':
+                score1 = float(input("Enter score threshold for the first gene: "))
+
+            ans2 = input("Do you want to enter a score threshold for the second gene? (y/n)")
+
+            if ans2 == 'y':
+                score2 = float(input("Enter score threshold for the second gene: "))
+
+            # find common diseases
+            gad.find_common_dieases(node1, node2, score1, score2)
+
+        # common genes
+        elif action == 'common genes':
+            print("\nFind if there are any common gene(s) between 2 diseases (with optional score thresholds)")
+            node1 = int(input("Enter the first disease's id: "))
+            node2 = int(input("Enter the second disease's id: "))
+
+            # default score thresholds
+            score1 = 0.0
+            score2 = 0.0
+
+            # ask user if they want to enter score thresholds
+            ans1 = input("Do you want to enter a score threshold for the first disease? (y/n)")
+
+            # if yes, get score threshold
+            if ans1 == 'y':
+                score1 = float(input("Enter score threshold for the first disease: "))
+
+            ans2 = input("Do you want to enter a score threshold for the second disease? (y/n)")
+
+            if ans2 == 'y':
+                score2 = float(input("Enter score threshold for the second disease: "))
+
+            # find common diseases
+            gad.find_common_genes(node1, node2, score1, score2)
+
+        # elif action == 'similar genes':
+
+        #     print("\nFind similar genes to the inputted gene")
+        #     find_similar_genes(G)
+        #     print()
+        
+        # network stats
+        elif action == 'network stats':
+            print("\nReturn statistics about gene-disease network.")
+
+            # ask what statistics to return
+            # print("Enter 'degree centrality' to return degree centrality for genes and diseases.")
+            print("Enter 'most connected genes' to return the most connected genes in the graph.")
+            print("Enter 'most connected diseases' to return the most connected diseases in the graph.")
+
+            # get user input
+            ans = input("Enter an action: ")
+
+            # degree centrality
+            # if ans == 'degree centrality':
+            #     print("\nDegree centrality for genes and diseases:")
+            #     gad.genes_degree_centraility()
+            #     gad.disease_degree_centraility()
+
+            # most connected genes
+            if ans == 'most connected genes':
+                print("\nMost connected genes in the graph.")
+                gad.most_connected_genes()
+
+            # most connected diseases
+            elif ans == 'most connected diseases':
+                print("\nMost connected diseases in the graph.")
+                gad.most_connected_diseases()
 
     # get gene details
     # geneID = gad.get_gene_details("ABCA1")
