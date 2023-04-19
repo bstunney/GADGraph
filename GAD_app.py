@@ -596,39 +596,38 @@ class GADGraph():
 
 def main():
 
-    # create GADGraph object
-    gad = GADGraph("bolt://localhost:7687", "neo4j", "password")
-
-    # clear the database
-    gad.clear_database()
-
-    # insert nodes and relationships
-    gad.insert_nodes_and_relationships()
-
     # user input
     q = False
 
     while q == False:
         print("\nPossible actions to enter: 'load network', 'gene details', 'disease details', 'subgraph', 'common_diseases', 'common genes', 'similar genes', 'network stats', or 'quit'")
+        print("MUST LOAD NETWORK IF FIRST USE OF APPLICATION")
+        print("----------------------------------------------------------------------------------------------------------------------------------------------------------------------------")
 
         # enter an action
         action = input("Enter an action: ").lower()
 
+        # load network
+        if action == 'load network':
+            print("\nLoad the gene-association-disease network")
+
+            # create GADGraph object
+            gad = GADGraph("bolt://localhost:7687", "neo4j", "password")
+
+            # clear the database
+            gad.clear_database()
+
+            # insert nodes and relationships
+            gad.insert_nodes_and_relationships()
+
         # quit the program
-        if action == 'quit':
+        elif action == 'quit':
 
             # set q to True to quit the program
             q = True
 
             # close the connection
             gad.close()
-
-        # load network
-        elif action == 'load network':
-            print("\nLoad the gene-association-disease network")
-
-            # load the full network
-            
 
         # gene details
         elif action == 'gene details':
