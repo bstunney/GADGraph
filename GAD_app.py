@@ -37,21 +37,21 @@ class GADGraph():
         # cypher query to insert nodes from genes.csv
         # gene has properties: geneId, geneSymbol, DSI, DPI, PLI, protein_class_name, NofDiseases
         gene_query = """
-        LOAD CSV WITH HEADERS FROM "file:///Users/sree/Second2/DS4300/GADGraph/data/genes.csv" AS row
+        LOAD CSV WITH HEADERS FROM "file:///Users/sree/Second2/DS4300/GADGraph/data/genes_v2.csv" AS row
         CREATE (g:Gene {geneId: row.geneId, geneSymbol: row.geneSymbol, DSI: row.DSI, DPI: row.DPI, PLI: row.PLI, protein_class_name: row.protein_class_name, NofDiseases: row.NofDiseases})
         """
 
         # cypher query to insert nodes from diseases.csv
         # disease has properties: diseaseId, diseaseName, diseaseType, diseaseClass, diseaseSemanticType, NofGenes
         disease_query = """
-        LOAD CSV WITH HEADERS FROM "file:///Users/sree/Second2/DS4300/GADGraph/data/diseases.csv" AS row
+        LOAD CSV WITH HEADERS FROM "file:///Users/sree/Second2/DS4300/GADGraph/data/diseases_v2.csv" AS row
         CREATE (d:Disease {diseaseId: row.diseaseId, diseaseName: row.diseaseName, diseaseType: row.diseaseType, diseaseClass: row.diseaseClass, diseaseSemanticType: row.diseaseSemanticType, NofGenes: row.NofGenes})
         """
 
         # cypher query to insert relationships from gad.csv
         # edge has properties: score, evidence index, evidence level
         edges_query = """
-        LOAD CSV WITH HEADERS FROM "file:///Users/sree/Second2/DS4300/GADGraph/data/gad.csv" AS row
+        LOAD CSV WITH HEADERS FROM "file:///Users/sree/Second2/DS4300/GADGraph/data/gad_v2.csv" AS row
         MATCH (g:Gene {geneId: row.geneId})
         MATCH (d:Disease {diseaseId: row.diseaseId})
         CREATE (g)-[r:ASSOCIATION {score: row.score, evidence_index: row.evidence_index, evidence_level: row.evidence_level}]->(d)
@@ -191,41 +191,84 @@ class GADGraph():
         # return graph analysis object
         return gva
 
-    def get_associations(self, node_idx, score_threshold=0.0):
+    # def get_associations(self, node_idx, score_threshold=0.0):
+    #     """
+    #     Get all associations for a given disease or gene
+    #     :param node_idx: index of gene or disease node
+    #     :type node_idx: str
+    #     :param score_threshold: score threshold for association, defaults to 0.0
+    #     :type score_threshold: float, optional
+    #     """
+
+    #     # query to check if node_idx matches a gene node's geneId
+    #     gene_query = """
+    #     MATCH (g:Gene {geneId: $node_idx})-[r:ASSOCIATION]-(d:Disease)
+    #     WHERE toFloat(r.score) >= $score
+    #     RETURN g.geneSymbol as geneSymbol, r.score AS score, d.diseaseName AS diseaseName
+    #     ORDER BY score DESC
+    #     """
+
+    #     # query to check if node_idx matches a disease node's diseaseId
+    #     disease_query = """
+    #     MATCH (d:Disease {diseaseId: $node_idx})-[r:ASSOCIATION]-(g:Gene)
+    #     WHERE toFloat(r.score) >= $score
+    #     RETURN d.diseaseName as diseaseName, r.score AS score, g.geneSymbol AS geneSymbol
+    #     ORDER BY score DESC
+    #     """
+
+    #     with self._driver.session() as session:
+    #         result = session.run(gene_query, node_idx=str(node_idx), score=score_threshold)
+
+    #         # check if results is empty
+    #         if not result.peek():
+    #             result = session.run(disease_query, node_idx=str(node_idx), score=score_threshold)
+
+    #         # check if results is empty
+    #         if not result.peek():
+    #             print("No gene or disease node with index", str(node_idx), "found. Make sure you are inputting the node *index* and not its name.")
+    #             print("You can use gene details or disease details to get the index of a gene or disease node.")
+    #             return
+    #         else:
+
+    #             # visualize the results
+    #             self._visualize(result)
+
+    def get_associations(self, node_name, score_threshold=0.0):
         """
         Get all associations for a given disease or gene
-        :param node_idx: index of gene or disease node
-        :type node_idx: str
+        :param node_name: name of gene or disease node
+        :type node_name: str
         :param score_threshold: score threshold for association, defaults to 0.0
         :type score_threshold: float, optional
         """
 
-        # query to check if node_idx matches a gene node's geneId
+        # query to check if node_name matches a gene node's geneSymbol
         gene_query = """
-        MATCH (g:Gene {geneId: $node_idx})-[r:ASSOCIATION]-(d:Disease)
+        MATCH (g:Gene {geneSymbol: $node_name})-[r:ASSOCIATION]-(d:Disease)
         WHERE toFloat(r.score) >= $score
         RETURN g.geneSymbol as geneSymbol, r.score AS score, d.diseaseName AS diseaseName
         ORDER BY score DESC
         """
 
-        # query to check if node_idx matches a disease node's diseaseId
+        # query to check if node_name matches a disease node's diseaseName
         disease_query = """
-        MATCH (d:Disease {diseaseId: $node_idx})-[r:ASSOCIATION]-(g:Gene)
+        MATCH (d:Disease {diseaseName: $node_name})-[r:ASSOCIATION]-(g:Gene)
         WHERE toFloat(r.score) >= $score
         RETURN d.diseaseName as diseaseName, r.score AS score, g.geneSymbol AS geneSymbol
         ORDER BY score DESC
         """
 
         with self._driver.session() as session:
-            result = session.run(gene_query, node_idx=str(node_idx), score=score_threshold)
+            result = session.run(gene_query, node_name=str(node_name), score=score_threshold)
 
             # check if results is empty
             if not result.peek():
-                result = session.run(disease_query, node_idx=str(node_idx), score=score_threshold)
+                result = session.run(disease_query, node_name=str(node_name), score=score_threshold)
 
             # check if results is empty
             if not result.peek():
-                print("No gene or disease node with index", str(node_idx), "found.")
+                print("No gene or disease node with name", node_name, "found. Make sure you are inputting the node *name* and not its index.")
+                print("You can use gene details or disease details to get the name of a gene or disease node from its index.")
                 return
             else:
 
@@ -263,7 +306,9 @@ class GADGraph():
                 result = session.run(geneSymbol_query, gene=str(gene))
             else:
                 for record in result:
-                    print(record)
+                    
+                    # print nicely
+                    print(f"Gene {gene} geneSymbol:", record['geneSymbol'])
 
                     # return geneSymbol
                     return record['geneSymbol']
@@ -274,7 +319,9 @@ class GADGraph():
                 return
             else:
                 for record in result:
-                    print(record)
+                    
+                    # print nicely
+                    print(f"Gene {gene} geneId:", record['geneId'])
 
                     # return geneId
                     return record['geneId']
@@ -309,7 +356,9 @@ class GADGraph():
                 result = session.run(diseaseName_query, disease=str(disease))
             else:
                 for record in result:
-                    print(record)
+                    
+                    # print nicely
+                    print(f"Disease {disease} diseaseName:", record['diseaseName'])
 
                     # return diseaseName
                     return record['diseaseName']
@@ -320,7 +369,9 @@ class GADGraph():
                 return
             else:
                 for record in result:
-                    print(record)
+                    
+                    # print nicely
+                    print(f"Disease {disease} diseaseId:", record['diseaseId'])
 
                     # return diseaseId
                     return record['diseaseId']
@@ -558,7 +609,7 @@ def main():
     q = False
 
     while q == False:
-        print("\nPossible actions to enter: 'gene details', 'disease details', 'subgraph', 'common_diseases', 'common genes', 'similar genes', 'network stats', or 'quit'")
+        print("\nPossible actions to enter: 'load network', 'gene details', 'disease details', 'subgraph', 'common_diseases', 'common genes', 'similar genes', 'network stats', or 'quit'")
 
         # enter an action
         action = input("Enter an action: ").lower()
@@ -571,6 +622,13 @@ def main():
 
             # close the connection
             gad.close()
+
+        # load network
+        elif action == 'load network':
+            print("\nLoad the gene-association-disease network")
+
+            # load the full network
+            
 
         # gene details
         elif action == 'gene details':
@@ -597,8 +655,17 @@ def main():
             print("\nCreate a subgraph for a given node and threshold for score of association")
 
             # get node index and score threshold
-            node_idx = str(input("Enter node index to create subgraph for: "))
-            score = float(input("Enter score to find relationships for the node: "))
+            node_idx = str(input("Enter node name (gene symbol or disease name) to create subgraph for: "))
+
+            # default score threshold
+            score = 0.0
+
+            # ask user if they want to enter a score threshold
+            ans = input("Do you want to enter a score threshold? (y/n)")
+
+            # if yes, get score threshold
+            if ans == 'y':
+                score = float(input("Enter score threshold for node: "))
 
             # create subgraph
             gad.get_associations(node_idx, score)            
@@ -661,7 +728,7 @@ def main():
         
         # network stats
         elif action == 'network stats':
-            print("\nReturn statistics about gene-disease network.")
+            print("\nStatistics about gene-association-disease network")
 
             # ask what statistics to return
             # print("Enter 'degree centrality' to return degree centrality for genes and diseases.")
@@ -698,8 +765,8 @@ def main():
                 # get user input
                 min_num_edges = int(input("Enter minimum number of edges for high association graph (recommended 15): "))
 
+                # create high association graph
                 gad.high_association_graph(min_num_edges)
-                # gad._show_graph()
 
             # back to main menu
             elif ans == 'back':
